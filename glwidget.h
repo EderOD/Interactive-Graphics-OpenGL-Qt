@@ -1,6 +1,7 @@
 #ifndef GLWIDGET_H
 #define GLWIDGET_H
 
+#define GL_GLEXT_PROTOTYPES
 #include <QGLWidget>
 #include <QWidget>
 #include<QtOpenGL>
@@ -22,7 +23,7 @@ signals:
 public slots:
     void toggleBackgroundColor(bool toBlack);
     void showFileOpenDialog ();
-    void animate();
+//    void animate();
 
 protected:
     void initializeGL();

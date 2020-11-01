@@ -29,7 +29,7 @@ GLWidget::GLWidget(QWidget *parent) :
 
 GLWidget::~GLWidget()
 {
-    //destroyVBOs();
+    destroyVBOs();
     destroyShaders();
 }
 void GLWidget::toggleBackgroundColor(bool toBlack)
@@ -43,7 +43,18 @@ void GLWidget::toggleBackgroundColor(bool toBlack)
 }
 void GLWidget::initializeGL()
 {
+    glEnable (GL_DEPTH_TEST);
 
+    QImage texColor = QImage (":/textures/bricksDiffuse.png");
+    QImage texNormal = QImage (":/textures/bricksNormal.png");
+
+    glActiveTexture(GL_TEXTURE0);
+    texID [0] = bindTexture ( texColor );
+    glActiveTexture ( GL_TEXTURE1 );
+    texID [1] = bindTexture ( texNormal );
+
+    connect(&timer,SIGNAL(timeout()),this,SLOT(animate()));
+    timer.start (0) ;
 }
 
 void GLWidget:: resizeGL(int width, int height)
