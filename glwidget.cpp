@@ -43,15 +43,17 @@ void GLWidget::toggleBackgroundColor(bool toBlack)
 }
 void GLWidget::initializeGL()
 {
+    QOpenGLFunctions f;
+    f.initializeOpenGLFunctions();
     glEnable (GL_DEPTH_TEST);
 
     QImage texColor = QImage (":/textures/bricksDiffuse.png");
     QImage texNormal = QImage (":/textures/bricksNormal.png");
 
-    glActiveTexture(GL_TEXTURE0);
-    texID [0] = bindTexture ( texColor );
-    glActiveTexture ( GL_TEXTURE1 );
-    texID [1] = bindTexture ( texNormal );
+    f.glActiveTexture(GL_TEXTURE0);
+    texID [0] = bindTexture(texColor);
+    f.glActiveTexture(GL_TEXTURE1);
+    texID [1] = bindTexture(texNormal);
 
     connect(&timer,SIGNAL(timeout()),this,SLOT(animate()));
     timer.start (0) ;
@@ -60,14 +62,72 @@ void GLWidget::initializeGL()
 void GLWidget:: resizeGL(int width, int height)
 {
     glViewport (0, 0, width , height );
-    projectionMatrix . setToIdentity ();
-    projectionMatrix . perspective (60.0 ,static_cast <qreal >( width ) / static_cast <qreal >( height ), 0.1 , 20.0);
-    trackBall . resizeViewport (width , height );
+    projectionMatrix.setToIdentity();
+    projectionMatrix.perspective(60.0 ,static_cast <qreal >( width ) / static_cast <qreal >( height ), 0.1 , 20.0);
+    trackBall . resizeViewport(width , height );
     updateGL ();
 }
 void GLWidget:: paintGL()
 {
+    QOpenGLFunctions f;
+    f.initializeOpenGLFunctions();
     glClear(GL_COLOR_BUFFER_BIT);
+    if (!vboVertices)
+        return;
+    modelViewMatrix.setToIdentity();
+    modelViewMatrix.lookAt(camera.eye,camera.at,camera.up);
+    modelViewMatrix.translate(0, 0, zoom);
+    modelViewMatrix.rotate(trackBall.getRotation());
+
+    shaderProgram->bind();
+    shaderProgram->setUniformValue("modelViewMatrix", modelViewMatrix);
+    shaderProgram->setUniformValue("projectionMatrix", projectionMatrix);
+    shaderProgram->setUniformValue("normalMatrix", modelViewMatrix.normalMatrix());
+
+    QVector4D ambientProduct = light.ambient * material.ambient;
+    QVector4D diffuseProduct = light.diffuse * material.diffuse;
+    QVector4D specularProduct = light.specular * material.specular;
+
+    shaderProgram->setUniformValue("lightPosition", light. position);
+    shaderProgram->setUniformValue("ambientProduct",ambientProduct);
+    shaderProgram->setUniformValue("diffuseProduct",diffuseProduct);
+    shaderProgram->setUniformValue("specularProduct",specularProduct);
+    shaderProgram->setUniformValue("shininess", static_cast<GLfloat>(material. shininess));
+
+    shaderProgram->setUniformValue("texColorMap", 0);
+    shaderProgram->setUniformValue("texNormalMap", 1);
+
+    f.glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texID[0]);
+    f.glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, texID[1]);
+
+    vboVertices->bind();
+    shaderProgram->enableAttributeArray("vPosition");
+    shaderProgram->setAttributeBuffer("vPosition", GL_FLOAT, 0, 4, 0);
+
+    vboNormals->bind();
+    shaderProgram->enableAttributeArray("vNormal");
+    shaderProgram->setAttributeBuffer("vNormal", GL_FLOAT, 0, 3, 0);
+
+    vboTexCoords -> bind();
+    shaderProgram->enableAttributeArray("vTexCoord");
+    shaderProgram->setAttributeBuffer("vTexCoord", GL_FLOAT, 0, 2, 0);
+
+    vboTangents ->bind();
+    shaderProgram -> enableAttributeArray("vTangent");
+    shaderProgram -> setAttributeBuffer("vTangent", GL_FLOAT, 0, 4, 0);
+
+    vboIndices -> bind();
+
+    glDrawElements(GL_TRIANGLES, numFaces * 3,  GL_UNSIGNED_INT, 0);
+
+    vboIndices -> release();
+    vboTangents -> release();
+    vboTexCoords -> release();
+    vboNormals -> release();
+    vboVertices -> release();
+    shaderProgram -> release();
 }
 
 void GLWidget::showFileOpenDialog()
@@ -411,4 +471,7 @@ void GLWidget :: wheelEvent ( QWheelEvent * event )
 {
     zoom += 0.001 * event -> delta ();
 }
-
+void GLWidget :: animate()
+{
+    updateGL();
+}

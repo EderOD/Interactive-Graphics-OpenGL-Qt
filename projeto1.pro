@@ -32,3 +32,16 @@ FORMS += \
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+DISTFILES += \
+    fgouraud.glsl \
+    fnormal.glsl \
+    fphong.glsl \
+    ftexture.glsl \
+    vgouraud.glsl \
+    vnormal.glsl \
+    vphong.glsl \
+    vtexture.glsl
+
+RESOURCES += \
+    resources.qrc

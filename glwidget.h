@@ -23,7 +23,7 @@ signals:
 public slots:
     void toggleBackgroundColor(bool toBlack);
     void showFileOpenDialog ();
-//    void animate();
+    void animate();
 
 protected:
     void initializeGL();
