@@ -81,6 +81,7 @@ private:
 
     QTimer timer;
 
+    QOpenGLFunctions texture;
 };
 
 

@@ -43,17 +43,15 @@ void GLWidget::toggleBackgroundColor(bool toBlack)
 }
 void GLWidget::initializeGL()
 {
-    QOpenGLFunctions f;
-    f.initializeOpenGLFunctions();
-    glEnable (GL_DEPTH_TEST);
+   glEnable(GL_DEPTH_TEST);
+   QImage texColor= QImage(":/textures/bricksDiffuse.png") ;
+   QImage texNormal= QImage(":/textures/bricksNormal.png") ;
 
-    QImage texColor = QImage (":/textures/bricksDiffuse.png");
-    QImage texNormal = QImage (":/textures/bricksNormal.png");
-
-    f.glActiveTexture(GL_TEXTURE0);
-    texID [0] = bindTexture(texColor);
-    f.glActiveTexture(GL_TEXTURE1);
-    texID [1] = bindTexture(texNormal);
+   texture.initializeOpenGLFunctions();
+   texture.glActiveTexture(GL_TEXTURE0);
+   texID[0] = bindTexture(texColor);
+   texture.glActiveTexture(GL_TEXTURE1);
+   texID[1] = bindTexture(texNormal);
 
     connect(&timer,SIGNAL(timeout()),this,SLOT(animate()));
     timer.start (0) ;
@@ -69,9 +67,8 @@ void GLWidget:: resizeGL(int width, int height)
 }
 void GLWidget:: paintGL()
 {
-    QOpenGLFunctions f;
-    f.initializeOpenGLFunctions();
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT |  GL_DEPTH_BUFFER_BIT);
+
     if (!vboVertices)
         return;
     modelViewMatrix.setToIdentity();
@@ -97,10 +94,10 @@ void GLWidget:: paintGL()
     shaderProgram->setUniformValue("texColorMap", 0);
     shaderProgram->setUniformValue("texNormalMap", 1);
 
-    f.glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texID[0]);
-    f.glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, texID[1]);
+    texture.glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D , texID [0]);
+    texture.glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D , texID [1]);
 
     vboVertices->bind();
     shaderProgram->enableAttributeArray("vPosition");
