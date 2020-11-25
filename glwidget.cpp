@@ -243,6 +243,7 @@ void GLWidget::readOFFFile(const QString &fileName){
         }
 
     }
+    indices = new unsigned int[i * 3];
     numFaces = i;
 
 
