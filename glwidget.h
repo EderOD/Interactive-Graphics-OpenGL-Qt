@@ -24,6 +24,10 @@ public slots:
     void toggleBackgroundColor(bool toBlack);
     void showFileOpenDialog ();
     void animate();
+    void gurro();
+    void fong();
+    void normal();
+    void textura();
 
 protected:
     void initializeGL();

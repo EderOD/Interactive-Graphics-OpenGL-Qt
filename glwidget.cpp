@@ -146,6 +146,7 @@ void GLWidget::showFileOpenDialog()
         genTangents();
 
         createVBOs();
+        currentShader = 0;
         createShaders();
 
         updateGL();
@@ -168,7 +169,7 @@ void GLWidget::readOFFFile(const QString &fileName){
     vertices = new QVector4D[numVertices];
 
     delete[] indices;
-    indices = new unsigned int[numFaces * 3];
+    indices = new unsigned int[numFaces * 3 * 3];
 
     if(numVertices > 0) {
         double minLim = std::numeric_limits<double>::min();
@@ -197,13 +198,33 @@ void GLWidget::readOFFFile(const QString &fileName){
             vertices[i].setW(1);
         }
     }
-    for(unsigned int i = 0; i < numFaces; i++) {
-        unsigned int a, b, c;
+    int i = 0;
+    while(!stream.eof()) {
+        unsigned int a, b, c, x;
+
+
         stream >> line >> a >> b >> c;
+        std::string::size_type sz;   // alias of size_t
+        int i_dec = std::stoi (line,&sz);
         indices[i*3  ]=a;
         indices[i*3+1]=b;
         indices[i*3+2]=c;
+        i_dec -= 3;
+        i++;
+        while(i_dec!= 0){
+            stream >> x;
+            indices[i*3  ]=b;
+            indices[i*3+1]=c;
+            indices[i*3+2]=x;
+            i++;
+            indices[i*3  ]=a;
+            indices[i*3+1]=c;
+            indices[i*3+2]=x;
+            i_dec--;
+            i++;
+        }
     }
+    numFaces = i;
     stream.close();
  }
 void GLWidget :: genNormals ()
@@ -470,5 +491,36 @@ void GLWidget :: wheelEvent ( QWheelEvent * event )
 }
 void GLWidget :: animate()
 {
+    updateGL();
+}
+void GLWidget::gurro()
+{
+
+    currentShader = 0;
+     createShaders();
+     updateGL();
+}
+
+void GLWidget::fong()
+{
+
+    currentShader = 1;
+    createShaders();
+    updateGL();
+}
+
+void GLWidget::textura()
+{
+
+    currentShader = 2;
+    createShaders();
+    updateGL();
+}
+
+void GLWidget::normal()
+{
+
+    currentShader = 3;
+    createShaders();
     updateGL();
 }
