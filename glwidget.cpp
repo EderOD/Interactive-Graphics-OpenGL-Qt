@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <QtGlobal>
+#include <stdlib.h>
 GLWidget::GLWidget(QWidget *parent) :
     QGLWidget(parent)
 {
@@ -151,10 +152,25 @@ void GLWidget::showFileOpenDialog()
         updateGL();
     }
 }
+int* countNumberString(std::string s){
+    std::string::size_type sz;
+    std::string delimiter = " ";
+    size_t pos = 0;
+    std::string token;
+    static int v[5] = {-1,-1,-1,-1,-1};
+    int idx = 0;
+    while ((pos = s.find(delimiter)) != std::string::npos) {
+        token = s.substr(0, pos);
+        v[idx] = std::stoi(token,&sz);
+        s.erase(0, pos + delimiter.length());
+        idx++;
+    }
+    return v;
+}
 void GLWidget::readOFFFile(const QString &fileName){
     std::ifstream stream;
     stream.open(fileName.toLatin1(), std::ifstream::in);
-
+    std::ifstream infile(fileName.toLatin1());
     if(!stream.is_open()) {
         qWarning("Cannot open file.");
         return;
@@ -168,7 +184,7 @@ void GLWidget::readOFFFile(const QString &fileName){
     vertices = new QVector4D[numVertices];
 
     delete[] indices;
-    indices = new unsigned int[numFaces * 3];
+    indices = new unsigned int[numFaces * 3 * 2];
 
     if(numVertices > 0) {
         double minLim = std::numeric_limits<double>::min();
@@ -197,13 +213,39 @@ void GLWidget::readOFFFile(const QString &fileName){
             vertices[i].setW(1);
         }
     }
-    for(unsigned int i = 0; i < numFaces; i++) {
-        unsigned int a, b, c;
-        stream >> line >> a >> b >> c;
-        indices[i*3  ]=a;
-        indices[i*3+1]=b;
-        indices[i*3+2]=c;
+
+    unsigned int a, b, c, d;
+    std::string l;
+    int i = 0;
+    while (std::getline(stream, l))
+    {
+        int* v;
+        if(l!= ""){
+            v = countNumberString(l);
+            a=*(v+1);
+            b=*(v+2);
+            c=*(v+3);
+            if(v[4]!= -1){
+                d=*(v+4);
+                indices[i*3]=a;
+            }
+            indices[i*3  ]=a;
+            indices[i*3+1]=b;
+            indices[i*3+2]=c;
+            i++;
+            if(v[4]!= -1){
+                d=*(v+4);
+                indices[i*3]=a;
+                indices[i*3+1]=c;
+                indices[i*3+2]=d;
+                i++;
+            }
+        }
+
     }
+    numFaces = i;
+
+
     stream.close();
  }
 void GLWidget :: genNormals ()
@@ -472,3 +514,5 @@ void GLWidget :: animate()
 {
     updateGL();
 }
+
+
