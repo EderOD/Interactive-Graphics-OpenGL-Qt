@@ -216,8 +216,6 @@ void GLWidget::readOFFFile(const QString &fileName){
             indices[i*3  ]=a;
             indices[i*3+1]=c;
             indices[i*3+2]=x;
-            a=b;
-            b=c;
             c=x;
             i_dec--;
             i++;
