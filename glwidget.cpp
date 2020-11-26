@@ -169,7 +169,7 @@ void GLWidget::readOFFFile(const QString &fileName){
     vertices = new QVector4D[numVertices];
 
     delete[] indices;
-    indices = new unsigned int[numFaces * 3 * 3];
+    indices = new unsigned int[numFaces * 3 * 5]; // Implementação malha mista N
 
     if(numVertices > 0) {
         double minLim = std::numeric_limits<double>::min();
@@ -213,13 +213,12 @@ void GLWidget::readOFFFile(const QString &fileName){
         i++;
         while(i_dec!= 0){
             stream >> x;
-            indices[i*3  ]=b;
-            indices[i*3+1]=c;
-            indices[i*3+2]=x;
-            i++;
             indices[i*3  ]=a;
             indices[i*3+1]=c;
             indices[i*3+2]=x;
+            a=b;
+            b=c;
+            c=x;
             i_dec--;
             i++;
         }
