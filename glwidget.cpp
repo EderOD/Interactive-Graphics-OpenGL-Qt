@@ -2,8 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <QtGlobal>
-GLWidget::GLWidget(QWidget *parent) :
-    QGLWidget(parent)
+GLWidget::GLWidget(QWidget *parent) : QGLWidget(parent)
 {
     vertices = NULL;
     normals = NULL;
@@ -23,8 +22,6 @@ GLWidget::GLWidget(QWidget *parent) :
     currentShader = 0;
 
     zoom = 0.0;
-
-
 }
 
 GLWidget::~GLWidget()
@@ -32,6 +29,7 @@ GLWidget::~GLWidget()
     destroyVBOs();
     destroyShaders();
 }
+
 void GLWidget::toggleBackgroundColor(bool toBlack)
 {
     if (toBlack)
@@ -41,6 +39,7 @@ void GLWidget::toggleBackgroundColor(bool toBlack)
 
     updateGL();
 }
+
 void GLWidget::initializeGL()
 {
    glEnable(GL_DEPTH_TEST);
@@ -53,8 +52,8 @@ void GLWidget::initializeGL()
    texture.glActiveTexture(GL_TEXTURE1);
    texID[1] = bindTexture(texNormal);
 
-    connect(&timer,SIGNAL(timeout()),this,SLOT(animate()));
-    timer.start (0) ;
+   connect(&timer,SIGNAL(timeout()),this,SLOT(animate()));
+   timer.start (0) ;
 }
 
 void GLWidget:: resizeGL(int width, int height)
@@ -65,12 +64,14 @@ void GLWidget:: resizeGL(int width, int height)
     trackBall . resizeViewport(width , height );
     updateGL ();
 }
+
 void GLWidget:: paintGL()
 {
     glClear(GL_COLOR_BUFFER_BIT |  GL_DEPTH_BUFFER_BIT);
 
     if (!vboVertices)
         return;
+
     modelViewMatrix.setToIdentity();
     modelViewMatrix.lookAt(camera.eye,camera.at,camera.up);
     modelViewMatrix.translate(0, 0, zoom);
@@ -127,6 +128,7 @@ void GLWidget:: paintGL()
     shaderProgram -> release();
 }
 
+// Função para escolher o arquivo e projetar na tela
 void GLWidget::showFileOpenDialog()
 {
     QByteArray fileFormat = "off";
@@ -137,6 +139,7 @@ void GLWidget::showFileOpenDialog()
         QString("%1 Files (*.%2)")
         .arg(QString(fileFormat.toUpper()))
         .arg(QString(fileFormat)));
+
     if (!fileName.isEmpty())
     {
         readOFFFile(fileName);
@@ -152,14 +155,23 @@ void GLWidget::showFileOpenDialog()
         updateGL();
     }
 }
-void GLWidget::readOFFFile(const QString &fileName){
+
+/*
+ * Essa função é responsável por fazer a  leitura do arquivo OFF usando a classe nativa stream,
+ * salvando as informações da malha.
+ */
+void GLWidget::readOFFFile(const QString &fileName)
+{
+    // A stream é usada pra abrir o arquivo
     std::ifstream stream;
     stream.open(fileName.toLatin1(), std::ifstream::in);
 
+    // Se o arquivo não foi aberto, gera esse warning
     if(!stream.is_open()) {
         qWarning("Cannot open file.");
         return;
     }
+
     std::string line;
 
     stream >> line;
@@ -171,6 +183,8 @@ void GLWidget::readOFFFile(const QString &fileName){
     delete[] indices;
     indices = new unsigned int[numFaces * 3 * 5]; // Implementação malha mista N
 
+    // Os vertices da malha serão salvos como vetores 4D.
+    // Isso, porque é usado para as coordenadas x, y, z e a posição usada pra zoom e tamanho
     if(numVertices > 0) {
         double minLim = std::numeric_limits<double>::min();
         double maxLim = std::numeric_limits<double>::max();
@@ -190,6 +204,7 @@ void GLWidget::readOFFFile(const QString &fileName){
             vertices[i] = QVector4D(x, y, z, 1.0);
         }
 
+        // Usado pra redimensionar a malha
         QVector4D midpoint = (min + max) * 0.5;
         double invdiag = 1/(max-min).length();
 
@@ -198,10 +213,10 @@ void GLWidget::readOFFFile(const QString &fileName){
             vertices[i].setW(1);
         }
     }
+
     int i = 0;
     while(!stream.eof()) {
         unsigned int a, b, c, x;
-
 
         stream >> line >> a >> b >> c;
         std::string::size_type sz;   // alias of size_t
@@ -223,7 +238,11 @@ void GLWidget::readOFFFile(const QString &fileName){
     }
     numFaces = i;
     stream.close();
- }
+}
+
+/* Calcula as normais nos vétices da malha
+ * As normais são salvas como objetos Qvector3D no array
+ */
 void GLWidget :: genNormals ()
 {
     delete[] normals;
@@ -247,6 +266,10 @@ void GLWidget :: genNormals ()
         normals[i].normalize();
 }
 
+/* As coordenadas cilindricas são geradas das texturas
+ * para os vertices da malha.
+ * O array texCoords armazena as cordenadas dos objetos Qvector2D
+ */
 void GLWidget :: genTexCoordsCylinder ()
 {
     delete[] texCoords;
@@ -264,6 +287,7 @@ void GLWidget :: genTexCoordsCylinder ()
         min.setX(qMin(min.x(), pos.x()));
         min.setY(qMin(min.y(), pos.y()));
     }
+
     QVector2D size = max - min;
     for(unsigned int i = 0; i < numVertices; i++) {
         double x = 2.0 * (vertices[i].x() - min.x()) /
@@ -273,6 +297,12 @@ void GLWidget :: genTexCoordsCylinder ()
                                  size.y());
     }
 }
+
+/*
+ * Para cada vértice são estimados os vetores tangentes.
+ * Essa função foi baseada no método de Langeyl que usa o
+ * mapeamento de normais como base
+ */
 void GLWidget :: genTangents ()
 {
     delete[] tangents;
@@ -318,6 +348,7 @@ void GLWidget :: genTangents ()
         bitangents[i2] += B;
         bitangents[i3] += B;
     }
+
     for(unsigned int i = 0; i < numVertices; i++) {
         const QVector3D & n = normals[i];
         const QVector4D & t = tangents[i];
@@ -328,19 +359,29 @@ void GLWidget :: genTangents ()
         double hand = QVector3D::dotProduct(b, bitangents[i]);
         tangents[i].setW((hand < 0.0) ? -1.0 : 1.0);
     }
+
     delete[] bitangents;
 }
+
+/* Os VBOs do OpenGL são criados nessa função pra renderizar as malhas
+ * Também utilizamos os Vertex Buffer Objects (VBO) pra manipular diretamente os dados do servidor
+*/
 void GLWidget :: createVBOs ()
 {
+    // Isso é pra não dar problemas de superposição e lixo nas variáveis
     destroyVBOs();
+
+    // Usado pra armazenar a posição dos vertices
     vboVertices = new QGLBuffer(QGLBuffer::VertexBuffer);
-    vboVertices->create();vboVertices->bind();
+    vboVertices->create(); // cria o buffer no servidor
+    vboVertices->bind();   // faz o vínculo
     vboVertices->setUsagePattern(QGLBuffer::StaticDraw);
-    vboVertices->allocate(vertices, numVertices * sizeof(QVector4D));
+    vboVertices->allocate(vertices, numVertices * sizeof(QVector4D)); // envia os dados do vértice pro VBO
 
     delete[] vertices;
     vertices = NULL;
 
+    // Usado pra armazenar as normais dos vértices
     vboNormals = new QGLBuffer(QGLBuffer::VertexBuffer);
     vboNormals->create();
     vboNormals->bind();
@@ -350,6 +391,7 @@ void GLWidget :: createVBOs ()
     delete[] normals;
     normals = NULL;
 
+    // Usado pra armazenar as coordenadas da textura
     vboTexCoords = new QGLBuffer(QGLBuffer::VertexBuffer);
     vboTexCoords->create();vboTexCoords->bind();
     vboTexCoords->setUsagePattern(QGLBuffer::StaticDraw);
@@ -358,6 +400,7 @@ void GLWidget :: createVBOs ()
     delete[] texCoords;
     texCoords = NULL;
 
+    // A mesma coisa, só que pra vetores tangentes
     vboTangents = new QGLBuffer(QGLBuffer::VertexBuffer);
     vboTangents->create();
     vboTangents->bind();
@@ -367,6 +410,7 @@ void GLWidget :: createVBOs ()
     delete[] tangents;
     tangents = NULL;
 
+    // Esse é a mesma coisa que os anteriores, mas usa o InderBuffer para os índices
     vboIndices = new QGLBuffer(QGLBuffer::IndexBuffer);
     vboIndices->create();
     vboIndices->bind();
@@ -376,7 +420,10 @@ void GLWidget :: createVBOs ()
     delete[] indices;
     indices = NULL;
 }
-void GLWidget::destroyVBOs(){
+
+// Destrói os VBOs criados
+void GLWidget::destroyVBOs()
+{
     if(vboVertices) {
         vboVertices->release();
         delete vboVertices;
@@ -403,6 +450,9 @@ void GLWidget::destroyVBOs(){
         vboIndices = NULL;
     }
 }
+
+// Os shaders do objeto são carregados nessa função
+// Mas a aplicação do shader no objeto é feito em outra função
 void GLWidget :: createShaders ()
 {
     destroyShaders();
@@ -434,7 +484,9 @@ void GLWidget :: createShaders ()
         qWarning() << shaderProgram->log() << Qt::endl;
 }
 
-void GLWidget :: destroyShaders (){
+// Essa função deleta os shaders compilados aplicados no programa
+void GLWidget :: destroyShaders ()
+{
     delete vertexShader;
     vertexShader = NULL;
 
@@ -447,7 +499,9 @@ void GLWidget :: destroyShaders (){
         shaderProgram = NULL;
      }
 }
-void GLWidget :: keyPressEvent ( QKeyEvent * event ){
+
+void GLWidget :: keyPressEvent ( QKeyEvent * event )
+{
     switch (event ->key ()){
         case Qt :: Key_0 :
             currentShader = 0;
@@ -468,7 +522,9 @@ void GLWidget :: keyPressEvent ( QKeyEvent * event ){
             qApp ->quit();
     }
 }
-void GLWidget :: mouseMoveEvent ( QMouseEvent * event ){
+
+void GLWidget :: mouseMoveEvent ( QMouseEvent * event )
+{
     trackBall . mouseMove (event -> pos());
 }
 
@@ -477,30 +533,32 @@ void GLWidget :: mousePressEvent ( QMouseEvent * event )
     if (event -> button () & Qt :: LeftButton )
         trackBall . mousePress (event -> pos());
 }
+
 void GLWidget :: mouseReleaseEvent ( QMouseEvent * event )
 {
     if (event -> button () == Qt :: LeftButton )
         trackBall . mouseRelease (event -> pos());
 }
+
 void GLWidget :: wheelEvent ( QWheelEvent * event )
 {
     zoom += 0.001 * event -> delta ();
 }
+
 void GLWidget :: animate()
 {
     updateGL();
 }
+
 void GLWidget::gurro()
 {
-
     currentShader = 0;
-     createShaders();
-     updateGL();
+    createShaders();
+    updateGL();
 }
 
 void GLWidget::fong()
 {
-
     currentShader = 1;
     createShaders();
     updateGL();
@@ -508,7 +566,6 @@ void GLWidget::fong()
 
 void GLWidget::textura()
 {
-
     currentShader = 2;
     createShaders();
     updateGL();
@@ -516,7 +573,6 @@ void GLWidget::textura()
 
 void GLWidget::normal()
 {
-
     currentShader = 3;
     createShaders();
     updateGL();
